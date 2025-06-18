@@ -55,11 +55,11 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     mockUserRepository = {
-      findByEmail: vi.fn(),
+      findByEmail: jest.fn(),
     };
 
     mockJwtService = {
-      sign: vi.fn(),
+      sign: jest.fn(),
     };
 
     authService = new AuthService(mockUserRepository, mockJwtService);
