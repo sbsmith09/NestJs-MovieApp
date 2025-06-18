@@ -1,4 +1,4 @@
-// Mock testing for AuthService user validation
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // Simulating NestJS dependencies without importing
 class UnauthorizedException extends Error {
@@ -48,16 +48,6 @@ class AuthService {
   }
 }
 
-// Basic mock to simulate Vitest's fn()
-function mockFn() {
-  const fn = (...args: any[]) => {};
-  fn.mockReturnValue = (value: any) => { fn.returnValue = value; };
-  fn.mockResolvedValue = (value: any) => { fn.resolvedValue = value; };
-  fn.mockImplementation = (impl: any) => { fn.implementation = impl; };
-  fn.mockReturnThis = () => fn;
-  return fn;
-}
-
 describe('AuthService', () => {
   let authService: AuthService;
   let mockUserRepository: any;
@@ -65,11 +55,11 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     mockUserRepository = {
-      findByEmail: mockFn(),
+      findByEmail: vi.fn(),
     };
 
     mockJwtService = {
-      sign: mockFn(),
+      sign: vi.fn(),
     };
 
     authService = new AuthService(mockUserRepository, mockJwtService);
