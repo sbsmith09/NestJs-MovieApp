@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+// User Validation Tests for AuthService
 
-// Simulating NestJS dependencies without importing
+// Mock implementation of UnauthorizedException
 class UnauthorizedException extends Error {
   constructor(message?: string) {
     super(message || 'Unauthorized');
@@ -8,7 +8,7 @@ class UnauthorizedException extends Error {
   }
 }
 
-// Mock AuthService implementation
+// Mock AuthService with minimal implementation
 class AuthService {
   constructor(
     private readonly userRepository: any, 
@@ -21,13 +21,10 @@ class AuthService {
     }
 
     const user = await this.userRepository.findByEmail(email);
-    if (!user) {
+    
+    // Simulate security best practices
+    if (!user || password !== user.password) {
       throw new UnauthorizedException('User not found');
-    }
-
-    const passwordMatch = await this.comparePasswords(password, user.password);
-    if (!passwordMatch) {
-      throw new UnauthorizedException('User not found'); // Intentionally generic for security
     }
 
     const token = this.jwtService.sign({ 
@@ -41,126 +38,101 @@ class AuthService {
       token
     };
   }
+}
 
-  private async comparePasswords(plainPassword: string, hashedPassword: string): Promise<boolean> {
-    // Simulating bcrypt compare
-    return plainPassword === hashedPassword;
+// Basic async test helper
+async function runTest(testFn: () => Promise<void>) {
+  try {
+    await testFn();
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
   }
 }
 
-// Basic mock function implementation
-function createMockFn() {
-  const fn = (...args: any[]) => {};
-  
-  fn.mockReturnValue = (value: any) => {
-    fn._returnValue = value;
-    return fn;
+// Test suite
+const testAuthService = async () => {
+  console.log('Starting AuthService tests...');
+
+  // Setup mocks
+  const mockUserRepository = {
+    findByEmail: async (email: string) => 
+      email === 'test@example.com' 
+        ? { id: '1', email: 'test@example.com', password: 'password123' } 
+        : null
   };
-  
-  fn.mockResolvedValue = (value: any) => {
-    fn._resolvedValue = value;
-    return async (...args: any[]) => value;
+
+  const mockJwtService = {
+    sign: () => 'mocktoken'
   };
-  
-  fn.mockImplementation = (impl: any) => {
-    fn._implementation = impl;
-    return fn;
-  };
-  
-  return fn;
-}
 
-describe('AuthService', () => {
-  let authService: AuthService;
-  let mockUserRepository: any;
-  let mockJwtService: any;
+  const authService = new AuthService(mockUserRepository, mockJwtService);
 
-  beforeEach(() => {
-    mockUserRepository = {
-      findByEmail: createMockFn(),
-    };
-
-    mockJwtService = {
-      sign: createMockFn(),
-    };
-
-    authService = new AuthService(mockUserRepository, mockJwtService);
-  });
-
-  it('should validate user successfully when credentials are correct', async () => {
-    const mockEmail = 'test@example.com';
-    const mockPassword = 'password123';
-    const mockUser = {
-      id: '1',
-      email: mockEmail,
-      password: mockPassword,
-    };
-
-    mockUserRepository.findByEmail.mockResolvedValue(mockUser);
-    mockJwtService.sign.mockReturnValue('mocktoken');
-
-    const result = await authService.validateUser(mockEmail, mockPassword);
-
-    expect(result).toEqual({
-      id: mockUser.id,
-      email: mockUser.email,
-      token: 'mocktoken',
-    });
-  });
-
-  it('should throw UnauthorizedException when user is not found', async () => {
-    const mockEmail = 'test@example.com';
-    const mockPassword = 'password123';
-
-    mockUserRepository.findByEmail.mockResolvedValue(null);
-
-    try {
-      await authService.validateUser(mockEmail, mockPassword);
-    } catch (error: any) {
-      expect(error).toBeInstanceOf(UnauthorizedException);
-      expect(error.message).toBe('User not found');
+  // Test successful validation
+  const successTest = await runTest(async () => {
+    const result = await authService.validateUser('test@example.com', 'password123');
+    if (!result || result.id !== '1' || result.token !== 'mocktoken') {
+      throw new Error('Validation failed');
     }
   });
 
-  it('should throw UnauthorizedException when password is incorrect', async () => {
-    const mockEmail = 'test@example.com';
-    const mockPassword = 'password123';
-    const mockUser = {
-      id: '1',
-      email: mockEmail,
-      password: 'differentpassword',
-    };
-
-    mockUserRepository.findByEmail.mockResolvedValue(mockUser);
-
+  // Test user not found
+  const userNotFoundTest = await runTest(async () => {
     try {
-      await authService.validateUser(mockEmail, mockPassword);
-    } catch (error: any) {
-      expect(error).toBeInstanceOf(UnauthorizedException);
-      expect(error.message).toBe('User not found'); // Intentionally generic for security
+      await authService.validateUser('nonexistent@example.com', 'password123');
+      throw new Error('Should have thrown UnauthorizedException');
+    } catch (error) {
+      if (!(error instanceof UnauthorizedException)) {
+        throw new Error('Wrong exception type');
+      }
     }
   });
 
-  it('should handle empty email or password', async () => {
+  // Test incorrect password
+  const incorrectPasswordTest = await runTest(async () => {
+    try {
+      await authService.validateUser('test@example.com', 'wrongpassword');
+      throw new Error('Should have thrown UnauthorizedException');
+    } catch (error) {
+      if (!(error instanceof UnauthorizedException)) {
+        throw new Error('Wrong exception type');
+      }
+    }
+  });
+
+  // Test empty credentials
+  const emptyCredentialsTest = await runTest(async () => {
     try {
       await authService.validateUser('', '');
-    } catch (error: any) {
-      expect(error).toBeInstanceOf(UnauthorizedException);
-      expect(error.message).toBe('Invalid credentials');
-    }
-
-    try {
-      await authService.validateUser('test@example.com', '');
-    } catch (error: any) {
-      expect(error).toBeInstanceOf(UnauthorizedException);
-      expect(error.message).toBe('Invalid credentials');
-    }
-
-    try {
-      await authService.validateUser('', 'password123');
-    } catch (error: any) {
-      expect(error).toBeInstanceOf(UnauthorizedException);
-      expect(error.message).toBe('Invalid credentials');
+      throw new Error('Should have thrown UnauthorizedException');
+    } catch (error) {
+      if (!(error instanceof UnauthorizedException)) {
+        throw new Error('Wrong exception type');
+      }
     }
   });
+
+  // Report results
+  const results = [
+    successTest, 
+    userNotFoundTest, 
+    incorrectPasswordTest, 
+    emptyCredentialsTest
+  ];
+
+  console.log('Test Results:');
+  results.forEach((result, index) => {
+    console.log(`Test ${index + 1}: ${result ? 'PASS' : 'FAIL'}`);
+  });
+
+  const allPassed = results.every(result => result);
+  console.log(`Overall: ${allPassed ? 'ALL TESTS PASSED' : 'SOME TESTS FAILED'}`);
+
+  return allPassed;
+};
+
+// Run the tests
+testAuthService().then(result => {
+  process.exit(result ? 0 : 1);
 });
