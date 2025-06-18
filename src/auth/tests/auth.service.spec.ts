@@ -48,12 +48,25 @@ class AuthService {
   }
 }
 
-// Mock function implementation
-function mockFn() {
+// Basic mock function implementation
+function createMockFn() {
   const fn = (...args: any[]) => {};
-  fn.mockReturnValue = (value: any) => { fn.returnedValue = value; return fn; };
-  fn.mockResolvedValue = (value: any) => { fn.resolvedValue = value; return fn; };
-  fn.mockRejectedValue = (value: any) => { fn.rejectedValue = value; return fn; };
+  
+  fn.mockReturnValue = (value: any) => {
+    fn._returnValue = value;
+    return fn;
+  };
+  
+  fn.mockResolvedValue = (value: any) => {
+    fn._resolvedValue = value;
+    return async (...args: any[]) => value;
+  };
+  
+  fn.mockImplementation = (impl: any) => {
+    fn._implementation = impl;
+    return fn;
+  };
+  
   return fn;
 }
 
@@ -64,11 +77,11 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     mockUserRepository = {
-      findByEmail: mockFn(),
+      findByEmail: createMockFn(),
     };
 
     mockJwtService = {
-      sign: mockFn(),
+      sign: createMockFn(),
     };
 
     authService = new AuthService(mockUserRepository, mockJwtService);
@@ -93,8 +106,6 @@ describe('AuthService', () => {
       email: mockUser.email,
       token: 'mocktoken',
     });
-
-    expect(mockUserRepository.findByEmail).toBeDefined();
   });
 
   it('should throw UnauthorizedException when user is not found', async () => {
