@@ -48,6 +48,15 @@ class AuthService {
   }
 }
 
+// Mock function implementation
+function mockFn() {
+  const fn = (...args: any[]) => {};
+  fn.mockReturnValue = (value: any) => { fn.returnedValue = value; return fn; };
+  fn.mockResolvedValue = (value: any) => { fn.resolvedValue = value; return fn; };
+  fn.mockRejectedValue = (value: any) => { fn.rejectedValue = value; return fn; };
+  return fn;
+}
+
 describe('AuthService', () => {
   let authService: AuthService;
   let mockUserRepository: any;
@@ -55,11 +64,11 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     mockUserRepository = {
-      findByEmail: vi.fn(),
+      findByEmail: mockFn(),
     };
 
     mockJwtService = {
-      sign: vi.fn(),
+      sign: mockFn(),
     };
 
     authService = new AuthService(mockUserRepository, mockJwtService);
@@ -85,7 +94,6 @@ describe('AuthService', () => {
       token: 'mocktoken',
     });
 
-    // This is a placeholder assertion
     expect(mockUserRepository.findByEmail).toBeDefined();
   });
 
@@ -97,7 +105,7 @@ describe('AuthService', () => {
 
     try {
       await authService.validateUser(mockEmail, mockPassword);
-    } catch (error) {
+    } catch (error: any) {
       expect(error).toBeInstanceOf(UnauthorizedException);
       expect(error.message).toBe('User not found');
     }
@@ -116,7 +124,7 @@ describe('AuthService', () => {
 
     try {
       await authService.validateUser(mockEmail, mockPassword);
-    } catch (error) {
+    } catch (error: any) {
       expect(error).toBeInstanceOf(UnauthorizedException);
       expect(error.message).toBe('Invalid password');
     }
@@ -125,21 +133,21 @@ describe('AuthService', () => {
   it('should handle empty email or password', async () => {
     try {
       await authService.validateUser('', '');
-    } catch (error) {
+    } catch (error: any) {
       expect(error).toBeInstanceOf(UnauthorizedException);
       expect(error.message).toBe('Invalid credentials');
     }
 
     try {
       await authService.validateUser('test@example.com', '');
-    } catch (error) {
+    } catch (error: any) {
       expect(error).toBeInstanceOf(UnauthorizedException);
       expect(error.message).toBe('Invalid credentials');
     }
 
     try {
       await authService.validateUser('', 'password123');
-    } catch (error) {
+    } catch (error: any) {
       expect(error).toBeInstanceOf(UnauthorizedException);
       expect(error.message).toBe('Invalid credentials');
     }
