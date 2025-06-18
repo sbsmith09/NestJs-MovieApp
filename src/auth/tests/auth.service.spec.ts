@@ -27,7 +27,7 @@ class AuthService {
 
     const passwordMatch = await this.comparePasswords(password, user.password);
     if (!passwordMatch) {
-      throw new UnauthorizedException('Invalid password');
+      throw new UnauthorizedException('User not found'); // Intentionally generic for security
     }
 
     const token = this.jwtService.sign({ 
@@ -126,7 +126,7 @@ describe('AuthService', () => {
       await authService.validateUser(mockEmail, mockPassword);
     } catch (error: any) {
       expect(error).toBeInstanceOf(UnauthorizedException);
-      expect(error.message).toBe('Invalid password');
+      expect(error.message).toBe('User not found'); // Intentionally generic for security
     }
   });
 
