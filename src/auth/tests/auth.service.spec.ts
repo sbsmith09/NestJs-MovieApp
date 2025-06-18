@@ -1,3 +1,5 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+
 // Simulating NestJS dependencies without importing
 class UnauthorizedException extends Error {
   constructor(message?: string) {
@@ -53,17 +55,17 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     mockUserRepository = {
-      findByEmail: jest.fn(),
+      findByEmail: vi.fn(),
     };
 
     mockJwtService = {
-      sign: jest.fn(),
+      sign: vi.fn(),
     };
 
     authService = new AuthService(mockUserRepository, mockJwtService);
   });
 
-  describe('validateUser', () => {
+  it('should validate user successfully when credentials are correct', async () => {
     const mockEmail = 'test@example.com';
     const mockPassword = 'password123';
     const mockUser = {
@@ -72,44 +74,53 @@ describe('AuthService', () => {
       password: mockPassword,
     };
 
-    it('should validate user successfully when credentials are correct', async () => {
-      mockUserRepository.findByEmail.mockResolvedValue(mockUser);
-      mockJwtService.sign.mockReturnValue('mocktoken');
+    mockUserRepository.findByEmail.mockResolvedValue(mockUser);
+    mockJwtService.sign.mockReturnValue('mocktoken');
 
-      const result = await authService.validateUser(mockEmail, mockPassword);
+    const result = await authService.validateUser(mockEmail, mockPassword);
 
-      expect(result).toEqual({
-        id: mockUser.id,
-        email: mockUser.email,
-        token: 'mocktoken',
-      });
-
-      expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(mockEmail);
+    expect(result).toEqual({
+      id: mockUser.id,
+      email: mockUser.email,
+      token: 'mocktoken',
     });
 
-    it('should throw UnauthorizedException when user is not found', async () => {
-      mockUserRepository.findByEmail.mockResolvedValue(null);
+    expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(mockEmail);
+  });
 
-      await expect(authService.validateUser(mockEmail, mockPassword))
-        .rejects.toThrow(UnauthorizedException);
-    });
+  it('should throw UnauthorizedException when user is not found', async () => {
+    const mockEmail = 'test@example.com';
+    const mockPassword = 'password123';
 
-    it('should throw UnauthorizedException when password is incorrect', async () => {
-      mockUserRepository.findByEmail.mockResolvedValue(mockUser);
+    mockUserRepository.findByEmail.mockResolvedValue(null);
 
-      await expect(authService.validateUser(mockEmail, 'wrongpassword'))
-        .rejects.toThrow(UnauthorizedException);
-    });
+    await expect(authService.validateUser(mockEmail, mockPassword))
+      .rejects.toThrow(UnauthorizedException);
+  });
 
-    it('should handle empty email or password', async () => {
-      await expect(authService.validateUser('', ''))
-        .rejects.toThrow(UnauthorizedException);
+  it('should throw UnauthorizedException when password is incorrect', async () => {
+    const mockEmail = 'test@example.com';
+    const mockPassword = 'password123';
+    const mockUser = {
+      id: '1',
+      email: mockEmail,
+      password: 'differentpassword',
+    };
 
-      await expect(authService.validateUser(mockEmail, ''))
-        .rejects.toThrow(UnauthorizedException);
+    mockUserRepository.findByEmail.mockResolvedValue(mockUser);
 
-      await expect(authService.validateUser('', mockPassword))
-        .rejects.toThrow(UnauthorizedException);
-    });
+    await expect(authService.validateUser(mockEmail, mockPassword))
+      .rejects.toThrow(UnauthorizedException);
+  });
+
+  it('should handle empty email or password', async () => {
+    await expect(authService.validateUser('', ''))
+      .rejects.toThrow(UnauthorizedException);
+
+    await expect(authService.validateUser('test@example.com', ''))
+      .rejects.toThrow(UnauthorizedException);
+
+    await expect(authService.validateUser('', 'password123'))
+      .rejects.toThrow(UnauthorizedException);
   });
 });
