@@ -1,7 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from '../auth.service';
-import { UserRepository } from '../user.repository';
-import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
@@ -17,21 +14,12 @@ const mockJwtService = {
 
 describe('AuthService', () => {
   let authService: AuthService;
-  let userRepository: UserRepository;
-  let jwtService: JwtService;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        { provide: UserRepository, useValue: mockUserRepository },
-        { provide: JwtService, useValue: mockJwtService },
-      ],
-    }).compile();
-
-    authService = module.get<AuthService>(AuthService);
-    userRepository = module.get<UserRepository>(UserRepository);
-    jwtService = module.get<JwtService>(JwtService);
+  beforeEach(() => {
+    authService = new AuthService(
+      mockUserRepository as any, 
+      mockJwtService as any
+    );
   });
 
   afterEach(() => {
@@ -65,7 +53,7 @@ describe('AuthService', () => {
         token: 'mocktoken',
       });
 
-      expect(userRepository.findByEmail).toHaveBeenCalledWith(mockEmail);
+      expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(mockEmail);
     });
 
     it('should throw UnauthorizedException when user is not found', async () => {
